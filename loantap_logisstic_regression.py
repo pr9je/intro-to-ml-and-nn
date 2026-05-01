@@ -43,78 +43,8 @@ print(f"  Columns : {df.shape[1]}")
 print(f"\n➡️ First 3 rows preview:")
 display(df.head(3))
 
-"""## **Problem Statement:**
-- LoanTap is a fintech platform that delivers customized, instant loan products to millennials and salaried professionals - targetting a segment traditionally underserved by legacy banking.
-
-### **Business Problem:**
-Loan tap needs to automate underwriting layer for persona loand that:
-  
-  (a) Decides WHETHER to extend credit to an applicant.
-  
-  (b) Recommends WHAT repayment terms (amount, tenure) are appropriate given the applicant's risk profile.
-
-### Two competing business risk exits:
-  
-
-*   1. Risk - 1 --- NPA (Non-Performing Assest):
-    - if a bad borrower is approved -> loan is not repaid -> capital lost
-    - this is a direct, permant financial loss on the balance sheet.
-
-
-
-*   2. Riskt -- 2 Missed Revenue (False Rejection):
-      - If a good borrower is rejected -> interest income is foregone.
-      - This is an oportunity cost - no capital is lot, only potential gain.
-
-
-* Since Risk 1 > Risk 2 in severity, the model must prioritize catching real defaulters over perfect precision.
-
-* MACHINE LEARNING FRAMING:
-    
-    Type      : Binary Classification
-    
-    Target    : loan_status
-
-    'Fully Paid'  → 0  (non-default)
-
-    'Charged Off' → 1  (default)
-    
-    
-    Algorithm : Logistic Regression (interpretable, auditable, industry-standard)
-
-
----
-
-
-
----
-
-
-* DATASET:
-    
-    Source  : LoanTap internal lending records
-   
-    Rows    : 396,030 loan applications
-   
-    Columns : 27 attributes covering borrower profile, loan characteristics credit history, and repayment behavior.
-
-
----
-
-
----
-
-
-
-* EVALUATION FOCUS:
-    Primary metric  → Recall  (minimize missed defaulters / NPAs)
-  
-    Secondary metric→ ROC-AUC (overall discriminatory power across thresholds)
-  
-    Tertiary metric → Precision (balance with business growth goals)
 
 ### **Structure and characteristics of the dataset**
-"""
 
 # shape
 print(f"\n► SHAPE")
@@ -136,14 +66,6 @@ print(f"\n► COLUMN CLASSIFICATION:")
 print(f"  Numeric columns  ({len(numeric_cols)}): {numeric_cols}")
 print(f"  Object  columns  ({len(object_cols)}) : {object_cols}")
 
-"""### **Insights:**
-- Most numeric columns are already float64.
-- Several columns appear numeric bur encode categories.
-  -  'term' contains '36 month' / '60 months' -> category or int.
-  - 'emp_length' contains '10+ years' strings -> needs to extraction to int.
-- Columns like 'issue_d' and earliest_cr_line' are date string -> need conversion to extract year/month for time-series features.
-- 'address' is free-text -> useful only for extracting strate abbreviation
-"""
 
 # Categorical columns to 'category' dtypes.
 
@@ -211,18 +133,7 @@ plt.tight_layout()
 plt.savefig('missing_values.png', dpi=100, bbox_inches='tight')
 plt.show()
 
-"""### **Missing Values insights**
-- mort_acc 9.5% missing values -> Borrower has no mortgage (0 = absent).
-- emp_title 5.8% missing values -> Not provided by borrowerr voluntarily.
-- emp_lenght 4.5 % missing values -> Self-employed / recent graduates skip
-- title 0.4% missing values -> Free-text field.
-- pub_rec_bankrupties 0.1 % missing values -> No record = 0 bankruptcies.
-- revol_util 0.07% missing values -> Missing credit utilization info.
-
-*NOTE: WE DO NOT TREAT MISSING VALUES HERE. Treatment happens in Preprocessing part.*
-
 ### **Statistical Summary:**
-"""
 
 # Numeric summary
 print("\n► NUMERIC COLUMNS – Descriptive Statistics:")
@@ -247,57 +158,8 @@ for col in cat_cols_to_convert:
 
 display(pd.DataFrame(cat_summary))
 
-"""### **STATISTICAL SUMMARY INSIGHTS:**
-
-1. LOAN AMOUNT (loan_amnt):
-
-    Min=$500, Max=$40,000, Mean≈$14,100, Median≈$12,000
-
-    → Most loans are $5K–$20K. Higher amounts less common.
-
-    → 75th percentile is $20,000 — large loans are the minority.
-
-2. INTEREST RATE (int_rate):
-
-    Range: 5.3% – 30.9%, Mean≈13.2%
-
-    → Relatively normal distribution. High rates (>20%) are rare but exist.
-
-    → High int_rate is LoanTap's own signal of perceived borrower risk.
-
-3.  ANNUAL INCOME (annual_inc):
-
-
-    Mean≈$74,200 but Std≈$61,000 — huge variability.
-
-    Max can exceed $8M — extreme outliers exist.
-
-
-4.  INSTALLMENT:
-
-
-    Mean≈$431, which multiplied by mean term gives total loan cost.
-
-    → Highly correlated with loan_amnt (expected).
-
-5. DTI (Debt-to-Income):
-
-    Mean≈17.4, Max≈999 (data quality issue — needs capping).
-
-    → Values >50 are unrealistic for salaried borrowers.
-
-6. PUB_REC, PUB_REC_BANKRUPTCIES:
-
-    Mean close to 0; most borrowers have clean records
-
-7. TARGET VARIABLE (loan_status):
-
-    Top value = 'Fully Paid' (~80.4%)
-
-    → Imbalanced dataset — requires class_weight='balanced' in model.
-
 ### **UNIVARIATE ANALYSIS – Continuous Variables**
-"""
+
 
 from matplotlib import transforms
 from IPython.core.pylabtools import figsize
@@ -356,103 +218,9 @@ plt.tight_layout()
 plt.savefig('univariate_continuous.png',dpi=100,bbox_inches='tight')
 plt.show()
 
-"""1. loan_amnt (Loan Amount):
-
-     → Right-skewed (skew > 1). Peak at $10K–$15K. Tail extends to $40K.
-
-     → Most borrowers request moderate amounts. Very large loans are rare.
-
-     → OUTLIER NOTE: Values above $35K are rare but legitimate (max=$40K).
-
-
-  2. int_rate (Interest Rate):
-  
-     → Roughly bell-shaped. Center ~12–14%. Range: 5.3%–30.9%.
-  
-     → Slight right skew. Rates >22% represent the riskiest borrowers.
-  
-     → This is LoanTap's own risk rating — highly informative for the model.
-
-
-  3. installment (Monthly Payment):
-
-     → Distribution mirrors loan_amnt (correlation = 0.95).
-
-     → Including both in the model introduces multicollinearity.
-
-     → One must be dropped during preprocessing.
-
-
-  4. annual_inc (Annual Income):
-
-     → Extremely right-skewed. Most incomes fall between $40K–$100K.
-
-     → Extreme values (>$300K) are likely real but distort statistics.
-
-     → REQUIRES CAPPING at 99th percentile before modeling.
-
-
-  5. dti (Debt-to-Income Ratio):
-
-     → Near-normal shape, center ~15–20. Right tail extends to ~40+.
-
-     → Very high DTI (>40) suggests borrower is over-leveraged.
-
-     → Extreme values (DTI=999) are data quality errors → cap needed.
-
-
-  6. open_acc (Open Credit Lines):
-
-     → Right-skewed integer. Mode around 8–10.
-
-     → Borrowers with 20+ open lines may be over-leveraged.
-
-
-  7. pub_rec (Public Derogatory Records):
-
-     → SEVERELY right-skewed. ~85% of borrowers have pub_rec = 0.
-
-     → Creating a binary flag (0 vs 1+) is more useful than raw value.
-
-
-  8. revol_bal (Revolving Balance):
-
-     → Heavily right-skewed. Most have $0–$20K balance.
-
-     → Tail extends to $1M+. Outlier capping essential.
-
-
-  9. revol_util (Revolving Utilization):
-
-     → Approximately uniform with slight right skew. Range 0%–150%+.
-
-     → Values >100% indicate data quality issue (balance exceeds limit).
-
-     → High utilization (>80%) is a strong default signal.
-
-
-  10. total_acc (Total Credit Lines Ever):
-
-      → Roughly normal-ish, range 2–162. Center ~25.
-
-      → Proxy for credit experience; more lines = older credit history.
-
-
-  11. mort_acc (Mortgage Accounts):
-
-      → Right-skewed. Most have 0–2 mortgages.
-
-      → Having a mortgage indicates creditworthy status (bank approved them).
-
-
-  12. pub_rec_bankruptcies:
-
-      → Almost all values are 0. Extreme right skew.
-
-      → Binary flag (any bankruptcy vs none) is the right transformation.
 
 ### **Univariate - Continous Variables (Boxplots)**
-"""
+
 
 # Boxplots to highlight outliers:
 fig, axes = plt.subplots(3,4,figsize=(20,14))
@@ -492,27 +260,9 @@ plt.tight_layout()
 plt.savefig('univariate_continuous_boxplots.png',dpi=100,bbox_inches='tight')
 plt.show()
 
-"""• annual_inc  : Largest outlier problem. Values extend far beyond IQR.
-  Top 1% earns >$300K — these dominate the boxplot whiskers.
-
-  • revol_bal   : Similar extreme right outliers.
-  
-  • loan_amnt   : Mild outliers at the top end (~$35K–$40K). Acceptable range.
-  
-  • int_rate    : No extreme outliers. Clean, bounded distribution.
-  
-  • dti         : Some extreme values (>60) suggest data entry errors.
-  
-  • pub_rec     : Technically every value >0 is an outlier by IQR definition
-                  due to the extreme concentration at 0.
-  
-  • revol_util  : Values >100 are impossible (utilization cannot exceed 100%)
-                  → These should be capped at 100.
-  
-  • total_acc   : A few borrowers have 100+ accounts — plausible but extreme.
 
 ### UNIVARIATE ANALYSIS - Categorical Variables
-"""
+
 
 cat_plot_cols = ['loan_status', 'grade', 'home_ownership',
                  'verification_status', 'purpose', 'term',
@@ -551,91 +301,8 @@ plt.tight_layout()
 plt.savefig('univariate_categorical.png',dpi=110,bbox_inches='tight')
 plt.show()
 
-"""### **Insights:**
-1. loan_status (TARGET):
-
-→ 80.4% Fully Paid vs 19.6% Charged Off.
-
-→ Significant CLASS IMBALANCE — 4:1 ratio.
-
-→ Naive model predicting all "Fully Paid" achieves 80% accuracy but
-  0% recall for defaulters. Must use class_weight='balanced'.
-
-
-2. grade (A → G):
-
-→ Grade B is the most common (~30%), followed by C (~22%).
-
-→ Grade A (~17%) is the safest; Grade G (<1%) is the riskiest.
-
-→ Distribution is approximately bell-shaped around BC.
-
-
-3. home_ownership:
-
-→ MORTGAGE dominates (47.8%), then RENT (39.5%), OWN (12.3%).
-
-→ 'ANY', 'OTHER', 'NONE' are negligible (<0.1%) — can be grouped.
-
-→ MORTGAGE holders may have greater financial stability.
-
-
-4. verification_status:
-
-→ ~45% Not Verified — LoanTap extends credit without income proof.
-
-→ ~32% Source Verified, ~23% Verified.
-
-→ Counter-intuitively, Verified borrowers sometimes default more
-  (because verification is triggered for borderline cases).
-
-
-5. purpose:
-
-→ debt_consolidation dominates (~47%) — people consolidating debt.
-
-→ credit_card (~12%), home_improvement (~7%) follow.
-
-→ 'small_business' has higher default rates despite low volume.
-
-
-6. term:
-
-→ 36-month (72.8%) vs 60-month (27.2%).
-
-→ 60-month borrowers carry higher default risk (longer exposure).
-
-
-7. initial_list_status:
-
-→ 'w' (whole loans) = 56%, 'f' (fractional) = 44%.
-
-→ Whole loans are sold as single units; fractional are crowdfunded.
-
-→ May have differing risk profiles due to selection bias.
-
-
-8. application_type:
-
-→ 98.7% INDIVIDUAL, 1.3% JOINT.
-
-→ Joint applications are too rare to have model impact.
-
-→ Can be kept as binary indicator (1 = JOINT).
-
-
-9. emp_length:
-
-→ '10+ years' is the modal category (~33%) — many long-tenured borrowers.
-
-→ '< 1 year' is second most common (~11%) — recent entrants.
-
-→ Bimodal shape: peak at <1 yr (new) and 10+ yrs (senior professionals).
-
-→ Convert to numeric (0–10) for modeling.
-
 ## **Bivariate Analysis - Target Vs Predictors**
-"""
+
 
 # Grade vs Loan Status
 fig, axes = plt.subplots(1,2,figsize=(18,6))
@@ -670,20 +337,6 @@ plt.tight_layout()
 plt.savefig('bivariate_grade_status.png', dpi=110, bbox_inches='tight')
 plt.show()
 
-"""### **GRADE vs LOAN STATUS:**
-
-• Clear monotonic trend: default rate increases from Grade A to Grade G.
-
-• Grade A: ~6% default rate  →  Grade G: ~37% default rate.
-
-• Grade is LoanTap's internal risk score — it works well as a predictor.
-
-• Grades F and G have very small volumes but very high default rates.
-
-• INSIGHT: Grade alone is not sufficient (sub_grade adds finer resolution).
-
-
-"""
 
 # Interest Rate by Loan Status;
 
@@ -720,19 +373,9 @@ plt.show()
 # Mean int_rate by status
 print(df.groupby('loan_status',observed=True)['int_rate'].agg(['mean','median']).round(2))
 
-"""### **INTEREST RATE vs LOAN STATUS:**
-• Charged Off loans have mean int_rate ≈ 14.5% vs ~12.3% for Fully Paid.
-  
-• The distributions overlap significantly — int_rate alone cannot separate the classes, but it contributes meaningfully.
-
-• Boxplot shows Charged Off has a higher median AND wider spread.
-
-• INSIGHT: int_rate is LoanTap's own assessment of risk → self-fulfilling. Riskier borrowers pay more → they are more financially stressed → they default.
-
-• This is the STRONGEST individual predictor in our logistic regression.
 
 ### **Loan Amount by Loan Status:**
-"""
+
 
 fig, axes = plt.subplots(1, 2, figsize=(16, 6))
 fig.suptitle('Bivariate: Loan Amount vs Loan Status', fontsize=14, fontweight='bold')
@@ -761,17 +404,9 @@ plt.show()
 print("  Mean loan amount by loan_status:")
 print(df.groupby('loan_status', observed=True)['loan_amnt'].agg(['mean', 'median']).round(0))
 
-"""### **LOAN AMOUNT vs LOAN STATUS:**
-• Charged Off loans have slightly higher average loan amounts (~$15,400) vs Fully Paid (~$13,900) — moderate difference.
-
-• Both distributions have similar shapes; amount alone is not a strong separator.
-
-• INSIGHT: It's not just HOW MUCH was borrowed, but who borrowed it
-(income, grade, utilization) that matters. Loan amount gains predictive
-power only in combination with other features.
 
 ### **DTI by Loan Status:**
-"""
+
 
 fig, axes = plt.subplots(1, 2, figsize=(16,6))
 fig.suptitle('Bivariate: DTI vs Loan Status', fontsize=14, fontweight='bold')
@@ -798,20 +433,9 @@ plt.tight_layout()
 plt.savefig('bivariate_dti_status.png', dpi=110, bbox_inches='tight')
 plt.show()
 
-"""### **DTI vs LOAN STATUS:**
 
-• Charged Off borrowers have slightly higher mean DTI (~18.8) vs Fully Paid (~17.1).
-
-• The difference is statistically meaningful despite visual overlap.
-
-• DTI >35 is a red flag — most lenders have hard cutoffs around 43%.
-
-• INSIGHT: DTI captures whether the borrower can afford monthly payments.
-
-High DTI means most income goes to debt service → vulnerable to any shock.
 
 ### Annual Income by Loan Status:
-"""
 
 income_cap = df['annual_inc'].quantile(0.99)
 df_cap = df[df['annual_inc'] < income_cap].copy()
@@ -843,19 +467,9 @@ plt.show()
 print("  Mean annual income by loan_status:")
 print(df.groupby('loan_status', observed=True)['annual_inc'].agg(['mean', 'median']).round(0))
 
-"""### **ANNUAL INCOME vs LOAN STATUS:**
-
-• Fully Paid borrowers have higher median income (~$62K vs ~$58K).
-
-• The income difference is modest but consistent.
-
-• Higher-income borrowers have more buffer to handle financial shocks.
-
-• INSIGHT: Income alone is not sufficient. A high income with high debt
-  (high DTI) still leads to defaults. Income must be used jointly with DTI.
 
 ### **Home Ownership vs Loan Status:**
-"""
+
 
 fig, axes = plt.subplots(1, 2, figsize=(16, 6))
 fig.suptitle('Bivariate: Home Ownership vs Loan Status', fontsize=14, fontweight='bold')
@@ -886,15 +500,4 @@ choff_col = [c for c in ho_pct.columns if 'Charged' in str(c)]
 if choff_col:
     print(ho_pct[choff_col[0]].sort_values(ascending=False).round(1).to_string())
 
-"""### **HOME OWNERSHIP vs LOAN STATUS:**
-
-• 'OTHER' and 'ANY' categories have higher default rates (too rare to generalize).
-
-• MORTGAGE holders have a slightly lower default rate vs RENT.
-
-• OWN (outright homeowners) have the lowest default rate.
-
-• INSIGHT: Owning property signals financial stability and acts as
-  implicit collateral motivation to maintain creditworthiness.
-"""
 
