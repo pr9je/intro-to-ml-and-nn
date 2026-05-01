@@ -72,15 +72,3 @@ LoanTap faces two key risks:
 * Bivariate analysis with target variable
 
 ---
-
-
-## 👨‍💻 Author
-
-**Mitesh Prajapati**
-Data Engineer | Machine Learning Enthusiast
-
----
-
-## ⭐ If you found this useful
-
-Give this repo a ⭐ on GitHub!
