@@ -641,3 +641,41 @@ for i in range(len(corr_matrix.columns)):
         r = corr_matrix.iloc[i, j]
         if abs(r) > 0.40:
             print(f"  {corr_matrix.columns[i]:<25} {corr_matrix.columns[j]:<25} {r:>8.3f}")
+
+# TOP JOBS TITLES ANALYSIS:
+
+if 'emp_title' in df.columns:
+  # clean and count
+  top_jobs = (
+      df['emp_title'].astype(str)
+      .str.strip()
+      .str.title()
+      .replace('Unknown',np.nan)
+      .dropna()
+      .value_counts()
+      .head(10)
+  )
+
+  fig, ax = plt.subplots(figsize=(12, 7))
+  
+  colors_jobs = sns.color_palette('viridis', len(top_jobs))
+  
+  bars = ax.barh(top_jobs.index[::-1], top_jobs.values[::-1],
+                   color=colors_jobs, edgecolor='black', height=0.7)
+  
+  ax.set_title('Top 15 Job Titles Among LoanTap Borrowers',
+                 fontsize=13, fontweight='bold')
+  
+  ax.set_xlabel('Number of Borrowers')
+
+  for bar, val in zip(bars, top_jobs.values[::-1]):
+        ax.text(bar.get_width() + 100, bar.get_y() + bar.get_height()/2,
+                f'{val:,}', va='center', fontsize=8)
+
+  plt.tight_layout()
+  plt.savefig('top_job_titles.png', dpi=110, bbox_inches='tight')
+  plt.show()
+
+  print("\n  Top 5 Job Titles:")
+  for rank, (title, count) in enumerate(top_jobs.head(5).items(), 1):
+      print(f"  {rank}. {title:<30} {count:>8,} borrowers")
