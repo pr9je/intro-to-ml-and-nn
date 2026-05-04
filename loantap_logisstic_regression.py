@@ -713,3 +713,12 @@ rows_after = len(df)
 print(f"\n► Rows before drop : {rows_before:,}")
 print(f"► Rows after drop  : {rows_after:,}")
 print(f"► Rows removed     : {rows_before - rows_after:,}")
+
+# Check duplicates on key identifying columns (not address/title which vary)
+key_cols = ['loan_amnt', 'int_rate', 'installment', 'annual_inc',
+            'dti', 'open_acc', 'revol_bal', 'revol_util']
+key_cols = [c for c in key_cols if c in df.columns]
+n_key_dups = df.duplicated(subset=key_cols).sum()
+
+print(f"\n► Near-duplicates (same on {len(key_cols)} numeric key columns): {n_key_dups:,}")
+print(f"  Note: These are different borrowers with identical profiles — RETAIN.")
