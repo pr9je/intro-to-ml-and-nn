@@ -722,3 +722,87 @@ n_key_dups = df.duplicated(subset=key_cols).sum()
 
 print(f"\n► Near-duplicates (same on {len(key_cols)} numeric key columns): {n_key_dups:,}")
 print(f"  Note: These are different borrowers with identical profiles — RETAIN.")
+
+# Missing value treatment.
+# mort_acc --> Median impuatation
+mort_median = df['mort_acc'].median()
+n_filled = df['mort_acc'].isnull().sum()
+df['mort_acc'].fillna(mort_median, inplace=True)
+print(f"  ✅ mort_acc          : filled {n_filled:,} NaNs with median = {mort_median:.1f}")
+
+# emp_title -> 'Unknown'
+if 'emp_title' in df.columns:
+    n_filled = df['emp_title'].isnull().sum()
+    df['emp_title'].fillna('Unknown', inplace=True)
+    print(f"  ✅ emp_title         : filled {n_filled:,} NaNs with 'Unknown'")
+
+# emp_length -> convert to numeric first, then fill 0
+# convert before filling so we get numeric 0
+df['emp_length'] = (
+    df['emp_length']
+    .astype(str)
+    .str.extract(r'(\d+)')[0]   # extract first digit(s)
+    .astype(float)
+)
+n_filled = df['emp_length'].isnull().sum()
+df['emp_length'].fillna(0, inplace=True)
+print(f"  ✅ emp_length         : converted to numeric + filled {n_filled:,} NaNs with 0")
+
+# title -> 'Unknown' 
+if 'title' in df.columns:
+    n_filled = df['title'].isnull().sum()
+    df['title'].fillna('Unknown', inplace=True)
+    print(f"  ✅ title             : filled {n_filled:,} NaNs with 'Unknown'")
+ 
+#  pub_rec_bankruptcies -> 0
+n_filled = df['pub_rec_bankruptcies'].isnull().sum()
+df['pub_rec_bankruptcies'].fillna(0, inplace=True)
+print(f"  ✅ pub_rec_bankruptcies: filled {n_filled:,} NaNs with 0")
+ 
+#  revol_util -> Median imputation 
+revol_median = df['revol_util'].median()
+n_filled = df['revol_util'].isnull().sum()
+df['revol_util'].fillna(revol_median, inplace=True)
+print(f"  ✅ revol_util         : filled {n_filled:,} NaNs with median = {revol_median:.1f}")
+
+# ── Verify: no missing values remain in key columns 
+remaining = df.isnull().sum()
+remaining_nonzero = remaining[remaining > 0]
+
+print(f"\n► Missing values AFTER treatment:")
+if len(remaining_nonzero) == 0:
+    print(f"  ✅ Zero missing values in all treated columns.")
+else:
+    display(remaining_nonzero.to_frame('Remaining Missing'))
+
+
+# Visual: Before and After:
+treated_cols = ['mort_acc', 'emp_length', 'pub_rec_bankruptcies', 'revol_util']
+
+before_vals_series = missing_df[missing_df['Column'].isin(treated_cols)].set_index('Column')['Missing Count']
+before_vals = before_vals_series.reindex(treated_cols).fillna(0).values
+
+after_missing = df[treated_cols].isnull().sum()
+
+fig, ax = plt.subplots(figsize=(9, 4))
+x = np.arange(len(treated_cols))
+width = 0.35
+
+bars1 = ax.bar(x - width/2, before_vals, width, label='Before', color='#EF5350', edgecolor='black')
+bars2 = ax.bar(x + width/2, after_missing.values, width, label='After', color='#66BB6A', edgecolor='black')
+
+ax.set_xticks(x)
+ax.set_xticklabels(treated_cols, rotation=15)
+ax.set_ylabel('Missing Count')
+ax.set_title('Missing Values: Before vs After Treatment', fontweight='bold')
+ax.legend()
+for bar in bars1:
+    if bar.get_height() > 0:
+        ax.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 50,
+                f'{int(bar.get_height()):,}', ha='center', va='bottom', fontsize=8)
+for bar in bars2:
+    ax.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 50,
+            f'{int(bar.get_height()):,}', ha='center', va='bottom', fontsize=8)
+plt.tight_layout()
+plt.savefig('missing_before_after.png', dpi=110, bbox_inches='tight')
+plt.show()
