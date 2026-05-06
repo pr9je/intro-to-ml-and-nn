@@ -806,3 +806,140 @@ for bar in bars2:
 plt.tight_layout()
 plt.savefig('missing_before_after.png', dpi=110, bbox_inches='tight')
 plt.show()
+
+
+# Outlier Treatment.
+outlier_cols = ['loan_amnt', 'int_rate', 'annual_inc', 'dti',
+                'revol_bal', 'revol_util', 'open_acc',
+                'pub_rec', 'total_acc', 'mort_acc', 'pub_rec_bankruptcies']
+outlier_cols = [c for c in outlier_cols if c in df.columns]
+
+# Build IQR outlier report
+outlier_report = []
+for col in outlier_cols:
+  data    = df[col].dropna()
+  Q1, Q3  = data.quantile(0.25), data.quantile(0.75)
+  OQR     = Q3 - Q1
+  lower   = Q1 - 1.5 * OQR
+  upper   = Q3 + 1.5 * OQR
+  n_out   = ((data < lower) | (data > upper)).sum()
+  pct_out  = n_out / len(data) * 100
+  p99      = data.quantile(0.99)
+  outlier_report.append({
+      'Column'    : col,
+      'Q1'        : round(Q1, 2),
+      'Q3'        : round(Q3, 2),
+      'IQR'       : round(IQR, 2),
+      'Lower Fence': round(lower, 2),
+      'Upper Fence': round(upper, 2),
+      '99th Pct'  : round(p99, 2),
+      'Max Value' : round(data.max(), 2),
+      'Outlier Count': n_out,
+      'Outlier %' : round(pct_out, 2)})
+  
+outlier_df = pd.DataFrame(outlier_report)
+print("► IQR Outlier Report:")
+display(outlier_df)
+
+
+# OUTLIER TREATMENT — Visual (Before)
+
+cap_visual_cols = ['annual_inc', 'revol_bal', 'dti', 'revol_util']
+ 
+fig, axes = plt.subplots(2, 4, figsize=(20, 10))
+fig.suptitle('Boxplots BEFORE Outlier Capping', fontsize=14, fontweight='bold')
+ 
+for i, col in enumerate(cap_visual_cols):
+    # Raw boxplot
+    axes[0, i].boxplot(
+        df[col].dropna(),
+        patch_artist=True,
+        boxprops=dict(facecolor='#EF9A9A', alpha=0.8),
+        medianprops=dict(color='red', linewidth=2),
+        flierprops=dict(marker='o', markersize=2, alpha=0.3, color='gray')
+    )
+    axes[0, i].set_title(f'{col}\n(Raw)', fontsize=10)
+ 
+    # Histogram
+    axes[1, i].hist(df[col].dropna(), bins=60,
+                    color='#EF9A9A', edgecolor='white', alpha=0.85)
+    axes[1, i].set_title(f'{col}\nHistogram (Raw)', fontsize=10)
+ 
+    Q1  = df[col].quantile(0.25)
+    Q3  = df[col].quantile(0.75)
+    IQR = Q3 - Q1
+    axes[1, i].axvline(Q3 + 1.5*IQR, color='red', linestyle='--',
+                       lw=1.5, label='IQR upper')
+    axes[1, i].axvline(df[col].quantile(0.99), color='blue',
+                       linestyle='--', lw=1.5, label='99th pct')
+    axes[1, i].legend(fontsize=7)
+ 
+plt.tight_layout()
+plt.savefig('outliers_before.png', dpi=110, bbox_inches='tight')
+plt.show()
+print("  ↑ Red dashed = IQR upper fence  |  Blue dashed = 99th percentile")
+
+
+### **Outlier Treatment - Applying Capping (Winsorization)**
+
+#  Treatment 1: Winsorize at 99th percentile
+# Columns where extreme tail values distort model
+winsorize_cols = {
+    'annual_inc': {'upper_pct': 0.99},
+    'revol_bal' : {'upper_pct': 0.99},
+    'dti'       : {'upper_pct': 0.99},
+}
+
+for col, params in winsorize_cols.items():
+    before_max = df[col].max()
+    cap_val    = df[col].quantile(params['upper_pct'])
+    n_capped   = (df[col] > cap_val).sum()
+    df[col]    = np.where(df[col] > cap_val, cap_val, df[col])
+    print(f"  ✅ {col:<15}: capped {n_capped:>5,} rows  "
+          f"| max before={before_max:>12,.1f}  → max after={df[col].max():>10,.1f}")
+
+# Treatment 2: Hard logical cap for revol_util
+# revol_util >100 is physically impossible
+before_max  = df['revol_util'].max()
+n_capped    = (df['revol_util'] > 100).sum()
+df['revol_util'] = np.where(df['revol_util'] > 100, 100, df['revol_util'])
+print(f"  ✅ {'revol_util':<15}: capped {n_capped:>5,} rows  "
+      f"| max before={before_max:>12,.1f}  → max after={df['revol_util'].max():>10,.1f}")
+
+# Treatment 3: pub_rec and pub_rec_bankruptcies
+# We do NOT cap these — we will create binary flags in Feature Engineering
+print(f"\n  ℹ️  pub_rec and pub_rec_bankruptcies:")
+print(f"     NOT capped here — binary flags will be created in Step 2d.")
+print(f"     Flag (1 = has record) is more meaningful than the raw count.")
+
+print(f"\n  Summary after outlier treatment:")
+for col in list(winsorize_cols.keys()) + ['revol_util']:
+    print(f"  {col:<18}: min={df[col].min():>10.2f}  "
+          f"max={df[col].max():>10.2f}  "
+          f"mean={df[col].mean():>10.2f}")
+    
+
+### **OUTLIER TREATMENT — Visual (After) + Comparison**
+
+fig, axes = plt.subplots(2, 4, figsize=(20, 10))
+fig.suptitle('Boxplots AFTER Outlier Capping (99th pct / logical caps)',
+             fontsize=14, fontweight='bold')
+
+for i, col in enumerate(cap_visual_cols):
+    axes[0, i].boxplot(
+        df[col].dropna(),
+        patch_artist=True,
+        boxprops=dict(facecolor='#A5D6A7', alpha=0.8),
+        medianprops=dict(color='red', linewidth=2),
+        flierprops=dict(marker='o', markersize=2, alpha=0.3, color='gray')
+    )
+
+    axes[0, i].set_title(f'{col}\n(After Cap)', fontsize=10)
+
+    axes[1, i].hist(df[col].dropna(), bins=60,
+                    color='#A5D6A7', edgecolor='white', alpha=0.85)
+    axes[1, i].set_title(f'{col}\nHistogram (After Cap)', fontsize=10)
+
+plt.tight_layout()
+plt.savefig('outliers_after.png', dpi=110, bbox_inches='tight')
+plt.show()
